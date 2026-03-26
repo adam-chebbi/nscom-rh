@@ -1,0 +1,56 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User profile information including role and department.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string", "description": "Full name" },
+        "email": { "type": "string", "description": "Email address" },
+        "role": { "type": "string", "enum": ["super_admin", "admin_rh", "superviseur", "worker", "observateur"], "description": "User role" },
+        "department": { "type": "string", "description": "Department or team" },
+        "photoURL": { "type": "string", "description": "Profile photo URL" },
+        "isActive": { "type": "boolean", "description": "Whether the account is active" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation date" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "CheckIn": {
+      "title": "Check-In / Check-Out",
+      "description": "A single pointage event.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of the worker" },
+        "checkedInBy": { "type": "string", "description": "UID of the admin/superviseur who performed the action" },
+        "type": { "type": "string", "enum": ["check-in", "check-out"], "description": "Type of pointage" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "rejected"], "description": "Status of the pointage" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Precise timestamp" },
+        "sessionId": { "type": "string", "description": "ID linking check-in and check-out" },
+        "durationMinutes": { "type": "number", "description": "Duration in minutes (for check-out)" },
+        "eventId": { "type": "string", "description": "Associated event ID" },
+        "note": { "type": "string", "description": "Optional note" },
+        "correctedBy": { "type": "string", "description": "UID of admin if corrected" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "latitude": { "type": "number" },
+            "longitude": { "type": "number" },
+            "accuracy": { "type": "number" }
+          }
+        }
+      },
+      "required": ["userId", "checkedInBy", "type", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profiles"
+    },
+    "/checkins/{id}": {
+      "schema": "CheckIn",
+      "description": "Pointage records"
+    }
+  }
+}

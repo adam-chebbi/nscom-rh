@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - displayName: string (optional) - Full name
+    //   - email: string (required) - Email address
+    //   - role: string (required) - one of ['super_admin', 'admin_rh', 'superviseur', 'worker', 'observateur']
+    //   - department: string (optional) - Team name
+    //   - photoURL: string (optional) - Profile photo URL
+    //   - isActive: bool (optional) - Account status
+    //   - createdAt: timestamp (optional) - Account creation date
+    //
+    // Collection: checkins
+    // Document ID: {id}
+    // Fields:
+    //   - userId: string (required) - UID of the worker
+    //   - checkedInBy: string (required) - UID of the admin/superviseur
+    //   - type: string (required) - one of ['check-in', 'check-out']
+    //   - timestamp: timestamp (required) - Event time
+    //   - sessionId: string (optional) - Session ID
+    //   - durationMinutes: number (optional) - Duration for check-out
+    //   - eventId: string (optional) - Event ID
+    //   - note: string (optional) - Optional note
+    //   - correctedBy: string (optional) - UID of admin if corrected
+    //   - location: map (optional) - {latitude: number, longitude: number, accuracy: number}
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['super_admin', 'admin_rh'] ||
+        (request.auth.token.email == "aichamechergui1@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isSuperviseur() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superviseur';
+    }
+
+    function canPoint() {
+      return isAdmin() || isSuperviseur();
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['super_admin', 'admin_rh', 'superviseur', 'worker', 'observateur'];
+    }
+
+    function isValidCheckIn(data) {
+      return data.keys().hasAll(['userId', 'checkedInBy', 'type', 'timestamp']) &&
+             data.userId is string &&
+             data.checkedInBy is string &&
+             data.type in ['check-in', 'check-out'] &&
+             (!('status' in data) || data.status in ['pending', 'confirmed', 'rejected']) &&
+             data.timestamp is timestamp &&
+             (!('location' in data) || (
+               data.location is map &&
+               data.location.latitude is number &&
+               data.location.longitude is number
+             ));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isAdmin() || isOwner(userId));
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role));
+      allow delete: if isAdmin();
+    }
+
+    match /checkins/{id} {
+      allow read: if isAuthenticated() && (isAdmin() || isSuperviseur() || resource.data.userId == request.auth.uid);
+      allow create: if canPoint() && isValidCheckIn(request.resource.data) && request.resource.data.checkedInBy == request.auth.uid;
+      allow update: if isAdmin() && isValidCheckIn(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

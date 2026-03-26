@@ -1,0 +1,5 @@
+{
+  "name": "PointagePro",
+  "description": "Système de pointage interne pour agences événementielles avec suivi en temps réel et gestion de rôles.",
+  "requestFramePermissions": ["geolocation"]
+}
