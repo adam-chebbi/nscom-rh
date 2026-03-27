@@ -4,8 +4,12 @@ import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs/promises";
 import path from "path";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
@@ -18,7 +22,13 @@ async function initializeFirebase() {
   if (isInitialized) return;
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
   try {
-    const config = JSON.parse(await fs.readFile(path.join(process.cwd(), "firebase-applet-config.json"), "utf-8"));
+    let configPath = path.join(process.cwd(), "firebase-applet-config.json");
+    try {
+      await fs.access(configPath);
+    } catch {
+      configPath = path.join(__dirname, "../../firebase-applet-config.json");
+    }
+    const config = JSON.parse(await fs.readFile(configPath, "utf-8"));
     if (config.firestoreDatabaseId) {
       firestoreDatabaseId = config.firestoreDatabaseId;
     }
