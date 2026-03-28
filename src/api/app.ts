@@ -1,6 +1,6 @@
 import express from "express";
 import admin from "firebase-admin";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import fs from "fs/promises";
 import path from "path";
 import dotenv from "dotenv";
@@ -109,13 +109,13 @@ app.post("/api/users/create", verifyAdmin, async (req: any, res) => {
       role,
       department,
       isActive: true,
-      createdAt: admin.firestore.Timestamp.now(),
+      createdAt: FieldValue.serverTimestamp(),
     });
 
     res.json({ uid: userRecord.uid });
   } catch (error: any) {
     console.error("Error creating user:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error ? error.message || error.toString() : "Unknown error" });
   }
 });
 
@@ -152,7 +152,7 @@ app.post("/api/users/update-password", verifyAdmin, async (req: any, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error("Error updating password:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error ? error.message || error.toString() : "Unknown error" });
   }
 });
 
@@ -187,7 +187,7 @@ app.post("/api/users/delete", verifyAdmin, async (req: any, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error("Error deleting user:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error ? error.message || error.toString() : "Unknown error" });
   }
 });
 
